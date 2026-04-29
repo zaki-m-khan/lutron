@@ -1,10 +1,11 @@
 # Backend stays off Vercel — host it on Render/Railway/locally.
-api/
-src/
-data/
-legacy_streamlit/
-requirements.txt
-*.py
+# Patterns are anchored with leading "/" so they only match the repo root,
+# never web/src/ or other nested folders.
+/api/
+/src/
+/data/
+/legacy_streamlit/
+/requirements.txt
+/.streamlit/
 *.pyc
 __pycache__/
-.streamlit/
