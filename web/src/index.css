@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    background: #0f1115;
+    color: #e6e8ec;
+  }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+  }
+  ::selection {
+    background: rgba(201, 137, 45, 0.35);
+    color: #fff;
+  }
+}
+
+@layer utilities {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+  .caps {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .scroll-thin::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: #262a33;
+    border-radius: 6px;
+    border: 2px solid #0f1115;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb:hover {
+    background: #363b45;
+  }
+  .kbd-ring:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1px #0f1115, 0 0 0 3px rgba(201, 137, 45, 0.45);
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #1a1d24 0%, #22262e 50%, #1a1d24 100%);
+    background-size: 400px 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+  .toast-in {
+    animation: toastIn 0.18s ease-out both;
+  }
+  .row-expand {
+    animation: rowExpand 0.14s ease-out both;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+@keyframes toastIn {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes rowExpand {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

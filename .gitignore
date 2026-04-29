@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Generated data caches (rebuilt on first API boot)
+data/orders.csv
+data/risk_model.pkl
+
+# Node / Vite
+node_modules/
+web/dist/
+web/.vite/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Streamlit
+.streamlit/
+
+# Claude / IDE launch configs
+.claude/
