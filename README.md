@@ -1,139 +1,73 @@
-# Delivery Excellence Cell — MVP Prototype
+# Delivery Excellence Cell — Year 2 Predictive Analytics Prototype
 
-Software prototype for **Option 3: Delivery Excellence Cell — Converting Operational Heroics into Systems**, the recommended growth path from the Lutron team report.
+A working software artifact accompanying the team's Lutron case-report recommendation of **Option 3: Delivery Excellence Cell**. The Cell is proposed as a permanent cross-functional unit whose mandate is to convert delivery escalations into permanent systemic fixes. This prototype implements the **Year 2 deliverable** of that proposal: the predictive analytics layer that the Cell would use day-to-day to surface at-risk orders, attribute root causes, and direct structural-fix priorities.
 
-The DEC is a permanent, cross-functional team that intercepts delivery escalations in real time, finds root causes, and converts each one into a permanent systemic fix. This MVP demonstrates the **Year 2 predictive analytics layer** that team would actually use day-to-day.
+The point of the artifact is to demonstrate that the Year 2 scope is technically straightforward on commodity tooling, and that the per-order risk score it produces is the direct data input for the Year 3 customer-facing modules (Promise Date, Tiered SLAs).
 
-The current build is a **two-process app**: a FastAPI backend that wraps the Python data + model layer, and a Vite + React + Tailwind frontend ("Northstar Ops · Delivery Excellence Cell") that renders the operational console.
+## Substance
 
-## What it does
+**Dataset.** 15,000 synthetic orders across 24 months, deterministic seed. The generator (`src/data_generator.py`) encodes the patterns identified in the case report's diagnosis: Configured and Bespoke product lines run later than Stock (28% vs. 5% baseline), the Mexico plant has elevated late-rate during its mid-2024 ramp window, supplier risk concentrates in Mexico and Bespoke Controls, Q4 carries a 1.5× seasonality multiplier, and large/complex orders slip more often. The most recent ~8% of orders are flagged open (no realized delivery yet) and serve as the model's prediction targets.
 
-Three screens, all driven by the same scored synthetic dataset (15,000 orders across 24 months, 4 customer segments, 4 product lines, 4 plants, 3 distribution centers):
+**Model.** A `HistGradientBoostingClassifier` (scikit-learn) trained on closed orders, predicting `is_late` from nine features: customer segment, product line, plant, distribution center, quantity, configuration complexity, supplier risk flag, promised lead days, and order month. 80/20 stratified train/test split. **Held-out test AUC ≈ 0.74** — meaningfully above chance, demonstrating the architecture works on Lutron-shaped data. Global feature ranking is computed via permutation importance and feeds the Pareto chart on the Root Causes screen.
 
-| Screen | Purpose |
+**Per-order attribution.** Each open order receives a top-driver assignment that maps onto a recommended DEC action ("engage supplier," "reroute capacity," "expedite engineering review," etc.). The current implementation is a rule-based heuristic that prioritizes the same factors the model treats as most predictive; production deployment would substitute TreeSHAP for true per-row attribution.
+
+**Architecture.** Two-process application. FastAPI backend (`api/`) wraps the Python data and model layer and exposes a JSON API. Vite + React + Tailwind frontend (`web/`) renders the operator console. Backend bootstrap generates the dataset and trains the model on first launch (~10 seconds), then caches both to disk; subsequent launches are instant.
+
+## Operator console
+
+Four screens, all driven by live API responses against the scored dataset:
+
+| Screen | What it shows |
 |---|---|
-| **Overview** | OTIF / On-Time / Lead Time / Variance KPIs vs Amazon and industry-best benchmarks, **filtered by the topbar date range** (Today / 7d / 30d / Quarter). 24-month OTIF trend with the 90/95/97.5% Lutron target bands. Top at-risk orders, worst-performing plants, open escalations. |
-| **Risk Queue** | Every open order scored 0–100% for late-risk. Dense table, filterable, expandable rows with per-order feature contributions and timeline. **"Engage supplier" / "Reroute capacity" / etc. POSTs to the action endpoint** — the row disappears, the open count drops, the summary refreshes. **"Export CSV"** downloads the live scored queue. |
-| **Root Causes** | Pareto of contributing factors (the headline auto-rewrites itself — "N factors explain 80% of late deliveries"), plant × product-line late-rate heatmap with worst/best/median callouts, monthly OTIF trend with seasonality annotations. |
-| **Data preview** | Paginated raw view of `data/orders.csv` (15,000 rows, 16 columns). Filter by All / Open / Closed. The same frame the model trains on — useful for showing the audience that the dashboard isn't a mock-up. |
+| **Overview** | OTIF, On-Time, Lead Time, and Variance KPIs against Amazon and industry-best benchmarks, filterable by date window. Twenty-four-month OTIF trend overlaid with the 90/95/97.5% Lutron target bands from the case-report roadmap. Top at-risk open orders, worst-performing plants, escalations stub. |
+| **Risk Queue** | All open orders scored 0–100% for late-risk. Filterable, paginated, with expandable rows that surface per-order driver contributions, an order timeline, and the recommended DEC action. Marking an order actioned posts to the backend; it disappears from the queue and the open count, summary chips, and dollars-at-risk all refresh in real time. CSV export pulls the live scored queue. |
+| **Root Causes** | Pareto of contributing factors with auto-generated headline ("N factors explain 80% of late deliveries," computed live from permutation importances). Plant × product-line late-rate heatmap with worst/best/median annotations. Sixteen-month OTIF trend annotated at the seasonality inflection points. |
+| **Data preview** | Paginated raw view of the 15,000-row training frame, filterable by open/closed status. Demonstrates that the dashboard reads from the same data the model trains on rather than from hardcoded fixtures. |
 
-## Quick start
+## How to run it
 
-Two processes — one Python, one Node. From `delivery-excellence-cell/`:
+Two processes, from `delivery-excellence-cell/`:
 
 ```bash
-# 1. backend
+# Backend
 pip install -r requirements.txt
 python -m uvicorn api.main:app --reload --port 8000
 
-# 2. frontend (in a second shell)
+# Frontend (separate shell)
 cd web
 npm install
-npm run dev   # → http://localhost:5173
+npm run dev    # http://localhost:5173
 ```
 
-First backend launch takes ~10 seconds: it generates the synthetic dataset (`data/orders.csv`), trains the risk model (`data/risk_model.pkl`), and caches both. Subsequent launches are instant.
-
-`POST /api/regenerate` rebuilds both caches end-to-end live — useful during the demo.
-
-The frontend ships with a "Demo build · synthetic data" badge so the audience knows what they're seeing.
-
-## How it maps to Option 3
-
-- **Rallying Point #3** ("Mechanisms to convert firefighting into systemic solutions") — every high-risk order gets a top driver and a recommended DEC action, turning prediction into intervention.
-- **Year 1 of the case-report roadmap** — the Overview screen is the executive view of what the Cell owns.
-- **Year 2 of the case-report roadmap** — the predictive risk model is the explicit "predictive analytics on the Year 1 data foundation" deliverable.
-- **Year 3 connects forward** — the model's per-order predictions are the data substrate for the future Promise-Date and Tiered-SLA modules.
+`POST /api/regenerate` rebuilds the dataset and retrains the model end-to-end; useful for demonstrating that the pipeline is live rather than scripted.
 
 ## Project layout
 
 ```
 delivery-excellence-cell/
-├── api/                            # FastAPI surface
-│   ├── main.py                     # app, CORS, /api/* endpoints, lifespan bootstrap
-│   └── shaping.py                  # builds the JSON shapes the React UI expects
-├── src/                            # Domain modules (unchanged from MVP)
-│   ├── data_generator.py           # Synthetic Lutron orders (deterministic seed)
-│   ├── risk_model.py               # HistGradientBoostingClassifier + scoring
-│   ├── kpis.py                     # OTIF / Fill Rate / Lead Time calculators
-│   └── benchmarks.py               # Amazon / industry-best constants
-├── web/                            # Vite + React + Tailwind frontend
-│   ├── src/
-│   │   ├── App.jsx                 # screen switcher + toast
-│   │   ├── api.js                  # fetch helpers (one per endpoint)
-│   │   ├── icons.jsx               # inline-SVG icon set
-│   │   ├── charts.jsx              # Spark / OtifLine / HBar / Pareto / Heatmap / TrendLine / RiskBar / FeatureBars
-│   │   ├── shell.jsx               # Sidebar, TopBar, Pill, Btn, Card primitives
-│   │   ├── overview.jsx            # Overview screen
-│   │   ├── risk_queue.jsx          # Risk Queue screen
-│   │   └── root_causes.jsx         # Root Causes screen
-│   ├── tailwind.config.js
-│   └── vite.config.js              # proxies /api → http://localhost:8000
-├── data/                           # Generated on first API boot
-├── legacy_streamlit/               # Original Streamlit MVP, kept as a fallback demo
-│   ├── app.py
-│   └── pages/
+├── api/                      FastAPI surface (main.py, shaping.py)
+├── src/                      Domain modules
+│   ├── data_generator.py     Synthetic Lutron orders (deterministic seed)
+│   ├── risk_model.py         Gradient-boosted classifier + scoring
+│   ├── kpis.py               OTIF / Fill Rate / Lead Time calculators
+│   └── benchmarks.py         Amazon / industry-best constants
+├── web/                      Vite + React + Tailwind frontend
+├── data/                     Generated on first API boot (gitignored)
+├── legacy_streamlit/         Earlier Streamlit MVP, retained as fallback
 └── requirements.txt
 ```
 
-## API surface
+## Mapping to the case-report roadmap
 
-| Endpoint | What the React UI gets |
-|---|---|
-| `GET /api/health` | `{status, orders, model_auc, open_orders, actioned}` |
-| `GET /api/kpis?range=today\|7d\|30d\|quarter` | OTIF / On-Time / Lead Time / Variance for the requested window, with delta vs the prior equal-length window |
-| `GET /api/otif-history` | 24 months of OTIF |
-| `GET /api/top-at-risk?limit=N` | Top-N open orders by risk score (excludes actioned) |
-| `GET /api/worst-plants` | Plants ranked by OTIF |
-| `GET /api/risk-summary` | `{open, critical, high, dollarsAtRisk}` (excludes actioned) |
-| `GET /api/risk-rows?page=&pageSize=&minRisk=` | Paginated risk-scored open orders + per-row feature contributions |
-| `GET /api/risk-rows.csv` | All scored open orders as CSV download |
-| `POST /api/orders/{id}/action` | Mark an order actioned — disappears from queue + counts |
-| `POST /api/orders/reset-actions` | Clear the actioned set (run between demos) |
-| `GET /api/orders?page=&pageSize=&filter=all\|open\|closed` | Raw orders rows for the Data preview screen |
-| `GET /api/pareto` | Feature importance × total late orders (top 7 + "Other") |
-| `GET /api/heatmap` | Plant × Product Line late-rate matrix |
-| `GET /api/trend` | 16 months OTIF with seasonality annotations |
-| `GET /api/escalations` | Static stub (Year 1 module not yet wired) |
-| `POST /api/regenerate` | Rebuilds dataset + retrains model, refreshes server cache, clears actioned |
+- **Year 1 (data foundation).** The Overview screen is the executive view of what the Cell would own once it has live OMS/ERP data. The synthetic generator is the placeholder for that integration.
+- **Year 2 (predictive analytics).** Implemented here. The Risk Queue and Root Causes screens are the Cell's working surfaces; the gradient-boosted model and per-order attribution are the analytical core.
+- **Year 3 (customer-facing modules).** The per-order risk score produced here is the direct data input required by the Promise Date and Tiered SLA modules proposed as later phases. Building it now is what makes the staged sequencing argument operationally credible.
 
-## Deployment
+## Deliberately out of scope
 
-The repo splits cleanly into two deployables:
-
-**Frontend → Vercel.** `vercel.json` is preconfigured. When connecting the repo on Vercel, set the **Root Directory** to `delivery-excellence-cell`. Vercel will run `cd web && npm install && npm run build` and serve `web/dist`. Set the `VITE_API_BASE` environment variable on Vercel to your backend URL (e.g. `https://dec-api.onrender.com`).
-
-**Backend → Render / Railway / Fly.io.** The FastAPI app (`pandas` + `scikit-learn`) is too large for Vercel's serverless function size limit, so host it as a long-lived process elsewhere. Render free tier works:
-
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
-- Root directory: `delivery-excellence-cell`
-- Add a CORS origin for your Vercel domain in `api/main.py` (currently allows `localhost:5173` only).
-
-For local-only demos none of this is needed — the two-process quickstart above is self-contained.
-
-## Streamlit fallback
-
-The original Streamlit MVP is preserved in `legacy_streamlit/` and still runs:
-
-```bash
-streamlit run legacy_streamlit/app.py
-```
-
-Use it if the demo machine can't run two processes.
-
-## What's intentionally out of scope (next iterations)
-
-- Escalation log / systemic-fix tracker (Year 1 in the roadmap; the Overview shows static stubs in the meantime)
-- ERP / real-data integration
-- Multi-user auth and role-based views
-- Promise-Date and Tiered-SLA modules (Years 3+)
-- Workspace navigation (Plants / Suppliers / SKUs / Models) — wired into the sidebar for design fidelity, but click-through is a placeholder
-
-## Demo script
-
-1. Open `http://localhost:5173`. Frame the DEC concept and point out the "Demo build · synthetic data" badge.
-2. **Overview** — OTIF (~55%) vs the 99% Amazon benchmark and the 90/95/97.5% Lutron target bands. Mexico plant is visibly the worst performer.
-3. **Risk Queue** — 907 open orders, $3.99M at risk. Click a high-risk Bespoke Controls row; walk through its feature contributions, the timeline, and the suggested DEC action. Click "Mark as actioned" to fire the toast.
-4. **Root Causes** — read the auto-generated headline ("N factors explain 80%"). Mexico × Bespoke is the hottest heatmap cell. Pair the trend's Q4 surge / Mexico ramp annotations with where the DEC's compounding fixes pay off.
-5. `curl -X POST http://localhost:8000/api/regenerate` to prove the pipeline rebuilds end-to-end live.
+- ERP / OMS integration. The Year 1 deliverable; not built here. The synthetic generator is its placeholder.
+- Per-row TreeSHAP attribution. Rule-based heuristic substitutes; a ten-line swap.
+- The Cell's escalation log / systemic-fix tracker (Year 1 module). The Overview shows a static stub.
+- Promise-Date and Tiered-SLA modules. Year 3.
+- Authentication, role-based views, and multi-user state.
