@@ -1,0 +1,10 @@
+# Backend stays off Vercel — host it on Render/Railway/locally.
+api/
+src/
+data/
+legacy_streamlit/
+requirements.txt
+*.py
+*.pyc
+__pycache__/
+.streamlit/
