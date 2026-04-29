@@ -16,14 +16,31 @@ The point of the artifact is to demonstrate that the Year 2 scope is technically
 
 ## Operator console
 
-Four screens, all driven by live API responses against the scored dataset:
+Four screens, all driven by live API responses against the scored dataset.
 
-| Screen | What it shows |
-|---|---|
-| **Overview** | OTIF, On-Time, Lead Time, and Variance KPIs against Amazon and industry-best benchmarks, filterable by date window. Twenty-four-month OTIF trend overlaid with the 90/95/97.5% Lutron target bands from the case-report roadmap. Top at-risk open orders, worst-performing plants, escalations stub. |
-| **Risk Queue** | All open orders scored 0–100% for late-risk. Filterable, paginated, with expandable rows that surface per-order driver contributions, an order timeline, and the recommended DEC action. Marking an order actioned posts to the backend; it disappears from the queue and the open count, summary chips, and dollars-at-risk all refresh in real time. CSV export pulls the live scored queue. |
-| **Root Causes** | Pareto of contributing factors with auto-generated headline ("N factors explain 80% of late deliveries," computed live from permutation importances). Plant × product-line late-rate heatmap with worst/best/median annotations. Sixteen-month OTIF trend annotated at the seasonality inflection points. |
-| **Data preview** | Paginated raw view of the 15,000-row training frame, filterable by open/closed status. Demonstrates that the dashboard reads from the same data the model trains on rather than from hardcoded fixtures. |
+### Overview
+
+![Overview screen](docs/overview.png)
+
+The executive view. The four KPI tiles (OTIF 55.1%, On-Time 57.5%, Lead Time 16.5d, Variance 12d) read against the case-report's Year 1/2/3 target bands (90/95/97.5%) and the Amazon 99% benchmark on the 24-month OTIF trend. Each tile carries a sparkline of the last 13 months and a delta against the prior equal-length window: the 10.2pp OTIF drop is computed live, not annotated. The right column lists open escalations (currently a static stub corresponding to the Year 1 module), the worst-performing plants this week (Mexico is the visible outlier, matching the case report's diagnosis of ramp variance), and the top open orders by model risk score.
+
+### Risk Queue
+
+![Risk Queue screen](docs/risk-queue.png)
+
+The Cell's firefighting console. All 906 open orders are scored 0–100% by the gradient-boosted model. The summary chips (139 critical, 326 high-risk, $3.99M at risk) are computed from the live scored frame. Every row carries the model's top-driver assignment (here: Supplier Risk Flag dominates, consistent with the case report's identification of supplier risk as concentrated in Mexico and Bespoke Controls) and a recommended DEC action. Acting on a row posts to the backend, removes it from the queue, and refreshes the summary chips and the open-count badge in the sidebar — the integration is live, not cosmetic. The visible plant-and-product mix (Coopersburg PA and Mexico Bespoke Controls) reflects the encoded structural pain points.
+
+### Root Causes
+
+![Root Causes screen](docs/root-causes.png)
+
+The structural-fix prioritization view. The Pareto headline ("3 factors explain 80% of late deliveries") is generated live from the model's permutation-importance ranking; Product Line, Supplier Risk Flag, and Order Month together cross the 80% threshold. The plant × product-line late-rate heatmap calls out Mexico × Bespoke Controls as the worst cell at 73% late, with Coopersburg PA × Stock Shades as the best at 14%. The annotated 16-month OTIF trend marks the Q4 surge inflection points (Oct 2024 and Oct 2025) where the case report locates the seasonality pain. Together these three views answer "where should the Cell's structural-fix backlog point first."
+
+### Data preview
+
+![Data preview screen](docs/data-preview.png)
+
+Paginated raw view of the 15,000-row training frame, filterable by open/closed status. The screen is included to make a credibility point: the dashboard reads from the same 16-column data frame the model is trained on. Order IDs, dates, segments, plant assignments, configuration complexity, supplier risk flags, and outcome columns are all visible. The "Demo build · synthetic data" badge in the top bar is intentional; when this Cell is operational, this preview becomes the live OMS connector view from the Year 1 deliverable.
 
 ## How to run it
 
